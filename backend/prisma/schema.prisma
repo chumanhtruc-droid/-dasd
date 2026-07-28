@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+}
+
+model ConnectionKey {
+  id        String   @id @default(uuid())
+  keyString String   @unique
+  status    String   @default("ACTIVE") // ACTIVE, LOCKED, EXPIRED
+  expiresAt DateTime?
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  keyId     String
+  key       ConnectionKey @relation(fields: [keyId], references: [id])
+  sender    String   // 'USER1' or 'USER2'
+  type      String   @default("TEXT") // TEXT, IMAGE, FILE
+  content   String
+  status    String   @default("SENT") // SENT, DELIVERED, READ
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
