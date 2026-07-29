@@ -299,11 +299,14 @@ namespace WindowsClient
                         if (this.Visibility == Visibility.Visible)
                         {
                             this.Visibility = Visibility.Collapsed;
+                            topmostTimer.Stop();
                         }
                         else
                         {
                             this.Visibility = Visibility.Visible;
-                            this.Activate();
+                            IntPtr handle = new WindowInteropHelper(this).Handle;
+                            SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                            topmostTimer.Start();
                         }
                     });
                     handled = true;
