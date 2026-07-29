@@ -38,7 +38,7 @@ namespace WindowsClient
             currentKey = KeyInput.Text.Trim();
             if (string.IsNullOrEmpty(currentKey)) return;
 
-            client = new SocketIO("http://localhost:5000");
+            client = new SocketIO("https://dasd-fzft.onrender.com");
 
             client.OnConnected += async (sender, e) =>
             {
@@ -146,7 +146,7 @@ namespace WindowsClient
                         var form = new MultipartFormDataContent();
                         form.Add(new ByteArrayContent(imageBytes), "file", "screenshot.jpg");
 
-                        var response = await httpClient.PostAsync("http://localhost:5000/api/upload", form);
+                        var response = await httpClient.PostAsync("https://dasd-fzft.onrender.com/api/upload", form);
                         if (response.IsSuccessStatusCode)
                         {
                             var resultStr = await response.Content.ReadAsStringAsync();
