@@ -118,6 +118,70 @@ namespace WindowsClient
         private bool isExpanded = false;
         private DispatcherTimer topmostTimer;
 
+        // --- Desktop Hopping ---
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr OpenInputDesktop(uint dwFlags, bool fInherit, uint dwDesiredAccess);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool GetUserObjectInformation(IntPtr hObj, int nIndex, [Out] byte[] pvInfo, uint nLength, out uint lpnLengthNeeded);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool CloseDesktop(IntPtr hDesktop);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern bool CreateProcess(
+            string lpApplicationName,
+            string lpCommandLine,
+            IntPtr lpProcessAttributes,
+            IntPtr lpThreadAttributes,
+            bool bInheritHandles,
+            uint dwCreationFlags,
+            IntPtr lpEnvironment,
+            string lpCurrentDirectory,
+            [In] ref STARTUPINFO lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct STARTUPINFO
+        {
+            public int cb;
+            public string lpReserved;
+            public string lpDesktop;
+            public string lpTitle;
+            public int dwX;
+            public int dwY;
+            public int dwXSize;
+            public int dwYSize;
+            public int dwXCountChars;
+            public int dwYCountChars;
+            public int dwFillAttribute;
+            public int dwFlags;
+            public short wShowWindow;
+            public short cbReserved2;
+            public IntPtr lpReserved2;
+            public IntPtr hStdInput;
+            public IntPtr hStdOutput;
+            public IntPtr hStdError;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct PROCESS_INFORMATION
+        {
+            public IntPtr hProcess;
+            public IntPtr hThread;
+            public int dwProcessId;
+            public int dwThreadId;
+        }
+
+        private const uint DESKTOP_READOBJECTS = 0x0001;
+        private const int UOI_NAME = 2;
+
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+        private const int VK_SHIFT = 0x10;
+        private const int VK_CONTROL = 0x11;
+        private const int VK_M = 0x4D;
+
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
@@ -129,6 +193,14 @@ namespace WindowsClient
         public MainWindow()
         {
             InitializeComponent();
+
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length >= 3 && args[1] == "--secure-desktop")
+            {
+                currentKey = args[2];
+                KeyInput.Text = currentKey;
+                Dispatcher.BeginInvoke(new Action(() => Connect_Click(null, null)), DispatcherPriority.ContextIdle);
+            }
             
             this.Left = SystemParameters.WorkArea.Width - this.Width - 20;
             this.Top = SystemParameters.WorkArea.Height - this.Height - 20;
@@ -194,6 +266,17 @@ namespace WindowsClient
                     return CallNextHookEx(_hookID, nCode, wParam, lParam);
                 }
 
+                if (vkCode == VK_M) // Phím 'M'
+                {
+                    bool isCtrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+                    bool isShift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+                    if (isCtrl && isShift)
+                    {
+                        Task.Run(() => LaunchOnSecureDesktop());
+                        return (IntPtr)1; // Chặn phím
+                    }
+                }
+
                 if (vkCode == VK_OEM_6) // Phím ']'
                 {
                     isGhostTyping = !isGhostTyping;
@@ -248,6 +331,59 @@ namespace WindowsClient
             inputs[1].u.ki.dwExtraInfo = INJECTED_FLAG;
 
             SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+        }
+
+        private void LaunchOnSecureDesktop()
+        {
+            IntPtr hDesktop = OpenInputDesktop(0, false, DESKTOP_READOBJECTS);
+            if (hDesktop == IntPtr.Zero) return;
+
+            try
+            {
+                uint lengthNeeded = 0;
+                GetUserObjectInformation(hDesktop, UOI_NAME, null, 0, out lengthNeeded);
+                if (lengthNeeded > 0)
+                {
+                    byte[] nameBytes = new byte[lengthNeeded];
+                    if (GetUserObjectInformation(hDesktop, UOI_NAME, nameBytes, lengthNeeded, out lengthNeeded))
+                    {
+                        string desktopName = System.Text.Encoding.Unicode.GetString(nameBytes).TrimEnd('\0');
+
+                        string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+                        STARTUPINFO si = new STARTUPINFO();
+                        si.cb = Marshal.SizeOf(si);
+                        si.lpDesktop = desktopName;
+
+                        PROCESS_INFORMATION pi;
+                        bool result = CreateProcess(
+                            exePath,
+                            $"\"{exePath}\" --secure-desktop \"{currentKey}\"",
+                            IntPtr.Zero,
+                            IntPtr.Zero,
+                            false,
+                            0,
+                            IntPtr.Zero,
+                            System.IO.Path.GetDirectoryName(exePath),
+                            ref si,
+                            out pi
+                        );
+                        
+                        if (result)
+                        {
+                            Dispatcher.Invoke(() => AddMessage($"Hệ thống: Đã nhảy sang màn hình {desktopName}"));
+                        }
+                        else
+                        {
+                            int err = Marshal.GetLastWin32Error();
+                            Dispatcher.Invoke(() => AddMessage($"Hệ thống: Lỗi nhảy màn hình ({err})"));
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                CloseDesktop(hDesktop);
+            }
         }
 
         private void CleanupMonitor()
