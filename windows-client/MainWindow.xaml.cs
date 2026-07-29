@@ -291,11 +291,17 @@ namespace WindowsClient
                                 await client.EmitAsync("send_message", new { content = url, type = "IMAGE" });
                             }
                         }
+                        else
+                        {
+                            var err = await response.Content.ReadAsStringAsync();
+                            Dispatcher.Invoke(() => MessageBox.Show("Lỗi Upload: " + response.StatusCode + " - " + err));
+                        }
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Dispatcher.Invoke(() => MessageBox.Show("Lỗi chụp ảnh: " + ex.Message));
                 this.Opacity = 1;
             }
             finally
