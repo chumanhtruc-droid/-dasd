@@ -4,31 +4,47 @@
         Title="RTM Client" Height="40" Width="140"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize"
-        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        PreviewKeyDown="Window_PreviewKeyDown">
     
     <Border Background="#99000000" CornerRadius="10" BorderBrush="#33FFFFFF" BorderThickness="1">
-        <Grid>
-            <!-- UI Before Connection -->
-            <StackPanel x:Name="LoginPanel" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBox x:Name="KeyInput" Width="90" Height="24" FontSize="10" 
-                         Background="#33FFFFFF" Foreground="White" BorderThickness="0"
-                         VerticalContentAlignment="Center" Margin="0,0,5,0"
-                         ToolTip="Nhập Key" />
-                <Button Content="Go" Width="25" Height="24" FontSize="10" 
-                        Background="#0078D7" Foreground="White" BorderThickness="0"
-                        Click="Connect_Click"/>
-            </StackPanel>
+        <StackPanel>
+            <Grid Height="38">
+                <!-- UI Before Connection -->
+                <StackPanel x:Name="LoginPanel" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBox x:Name="KeyInput" Width="90" Height="24" FontSize="10" 
+                             Background="#33FFFFFF" Foreground="White" BorderThickness="0"
+                             VerticalContentAlignment="Center" Margin="0,0,5,0"
+                             ToolTip="Nhập Key" />
+                    <Button Content="Go" Width="25" Height="24" FontSize="10" 
+                            Background="#0078D7" Foreground="White" BorderThickness="0"
+                            Click="Connect_Click"/>
+                </StackPanel>
 
-            <!-- UI After Connection -->
-            <StackPanel x:Name="ActionPanel" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
-                <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="Red" Margin="0,0,8,0" />
-                <Button x:Name="BtnCapture" Content="📸" Width="30" Height="24" FontSize="12" 
-                        Background="Transparent" Foreground="White" BorderThickness="0"
-                        Click="Capture_Click" ToolTip="Chụp màn hình" Cursor="Hand" />
-                <Button Content="❌" Width="30" Height="24" FontSize="10" 
-                        Background="Transparent" Foreground="White" BorderThickness="0"
-                        Click="Disconnect_Click" ToolTip="Ngắt kết nối" Cursor="Hand" />
-            </StackPanel>
-        </Grid>
+                <!-- UI After Connection -->
+                <StackPanel x:Name="ActionPanel" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                    <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="Red" Margin="0,0,8,0" />
+                    <Button x:Name="BtnCapture" Content="📸" Width="30" Height="24" FontSize="12" 
+                            Background="Transparent" Foreground="White" BorderThickness="0"
+                            Click="Capture_Click" ToolTip="Chụp màn hình (Ctrl+X)" Cursor="Hand" />
+                    <Button Content="❌" Width="30" Height="24" FontSize="10" 
+                            Background="Transparent" Foreground="White" BorderThickness="0"
+                            Click="Disconnect_Click" ToolTip="Ngắt kết nối" Cursor="Hand" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Chat Panel (Tự động mở rộng) -->
+            <Grid x:Name="ChatPanel" Visibility="Collapsed" Height="260">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ListBox x:Name="MessageList" Grid.Row="0" Background="Transparent" Foreground="White" BorderThickness="0" Margin="5" 
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Hidden" />
+                
+                <TextBox x:Name="ChatInput" Grid.Row="1" Background="#33FFFFFF" Foreground="White" BorderThickness="0" Height="26" Margin="5" 
+                         VerticalContentAlignment="Center" Padding="5,0,5,0" Visibility="Collapsed" KeyDown="ChatInput_KeyDown" />
+            </Grid>
+        </StackPanel>
     </Border>
 </Window>

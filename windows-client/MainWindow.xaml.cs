@@ -11,6 +11,9 @@ using System.Windows.Threading;
 using SocketIOClient;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
+using System.Windows.Controls;
 
 namespace WindowsClient
 {
@@ -19,13 +22,57 @@ namespace WindowsClient
         private SocketIOClient.SocketIO client;
         private string currentKey = "";
         
+        // P/Invoke for Global Hotkey
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        
+        private const int HOTKEY_ID = 9000;
+        private const uint MOD_CONTROL = 0x0002;
+        private const uint VK_X = 0x58;
+
+        private bool isExpanded = false;
+
         public MainWindow()
         {
             InitializeComponent();
             
-            // Set window position to bottom right corner
             this.Left = SystemParameters.WorkArea.Width - this.Width - 20;
             this.Top = SystemParameters.WorkArea.Height - this.Height - 20;
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            HwndSource source = HwndSource.FromHwnd(handle);
+            source.AddHook(HwndHook);
+            
+            // Register Ctrl + X as global hotkey
+            RegisterHotKey(handle, HOTKEY_ID, MOD_CONTROL, VK_X);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            UnregisterHotKey(handle, HOTKEY_ID);
+            base.OnClosed(e);
+        }
+
+        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_HOTKEY = 0x0312;
+            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            {
+                // Ctrl + X pressed anywhere
+                if (client != null && client.Connected)
+                {
+                    Dispatcher.Invoke(() => Capture_Click(null, null));
+                }
+                handled = true;
+            }
+            return IntPtr.Zero;
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -75,10 +122,7 @@ namespace WindowsClient
 
             client.On("error", response =>
             {
-                Dispatcher.Invoke(() =>
-                {
-                    MessageBox.Show("Lỗi kết nối hoặc Key không hợp lệ.");
-                });
+                Dispatcher.Invoke(() => MessageBox.Show("Lỗi kết nối hoặc Key không hợp lệ."));
             });
 
             client.On("new_message", response =>
@@ -86,18 +130,95 @@ namespace WindowsClient
                 var data = response.GetValue<JsonObject>();
                 if (data["sender"]?.ToString() != "USER1")
                 {
-                    // Show small notification on Windows
-                    // In full implementation, use Windows Community Toolkit ToastNotificationManager
+                    var content = data["content"]?.ToString();
+                    var type = data["type"]?.ToString();
                     Dispatcher.Invoke(() =>
                     {
-                        // Temporary visual cue
-                        StatusDot.Fill = new SolidColorBrush(Colors.Yellow);
-                        Task.Delay(1000).ContinueWith(_ => Dispatcher.Invoke(() => StatusDot.Fill = new SolidColorBrush(Colors.Green)));
+                        if (type == "TEXT")
+                        {
+                            AddMessage("Nhà: " + content);
+                            ExpandWindow();
+                        }
                     });
                 }
             });
 
             await client.ConnectAsync();
+        }
+        
+        private void AddMessage(string text)
+        {
+            MessageList.Items.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap });
+            MessageList.SelectedIndex = MessageList.Items.Count - 1;
+            MessageList.ScrollIntoView(MessageList.SelectedItem);
+        }
+
+        private void ExpandWindow()
+        {
+            if (isExpanded) return;
+            isExpanded = true;
+            this.Width = 250;
+            this.Height = 300;
+            this.Left = SystemParameters.WorkArea.Width - this.Width - 20;
+            this.Top = SystemParameters.WorkArea.Height - this.Height - 20;
+            ChatPanel.Visibility = Visibility.Visible;
+        }
+
+        private void CollapseWindow()
+        {
+            if (!isExpanded) return;
+            isExpanded = false;
+            ChatPanel.Visibility = Visibility.Collapsed;
+            this.Width = 140;
+            this.Height = 40;
+            this.Left = SystemParameters.WorkArea.Width - this.Width - 20;
+            this.Top = SystemParameters.WorkArea.Height - this.Height - 20;
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Oem3 || e.Key == Key.OemTilde) // Backtick ` key
+            {
+                ExpandWindow();
+                ChatInput.Visibility = Visibility.Visible;
+                ChatInput.Focus();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                CollapseWindow();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Up)
+            {
+                if (MessageList.SelectedIndex > 0)
+                    MessageList.SelectedIndex--;
+                MessageList.ScrollIntoView(MessageList.SelectedItem);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Down)
+            {
+                if (MessageList.SelectedIndex < MessageList.Items.Count - 1)
+                    MessageList.SelectedIndex++;
+                MessageList.ScrollIntoView(MessageList.SelectedItem);
+                e.Handled = true;
+            }
+        }
+
+        private async void ChatInput_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                string text = ChatInput.Text.Trim();
+                if (!string.IsNullOrEmpty(text) && client != null && client.Connected)
+                {
+                    await client.EmitAsync("send_message", new { content = text, type = "TEXT" });
+                    AddMessage("Bạn: " + text);
+                    ChatInput.Text = "";
+                    ChatInput.Visibility = Visibility.Collapsed;
+                }
+                e.Handled = true;
+            }
         }
 
         private async void Disconnect_Click(object sender, RoutedEventArgs e)
@@ -109,6 +230,7 @@ namespace WindowsClient
                 client = null;
             }
 
+            CollapseWindow();
             LoginPanel.Visibility = Visibility.Visible;
             ActionPanel.Visibility = Visibility.Collapsed;
         }
@@ -117,15 +239,13 @@ namespace WindowsClient
         {
             if (client == null || !client.Connected) return;
             
-            BtnCapture.IsEnabled = false;
+            if (BtnCapture != null) BtnCapture.IsEnabled = false;
 
             try
             {
-                // Hide window temporarily
                 this.Opacity = 0;
                 await Task.Delay(200);
 
-                // Capture screen
                 Bitmap bitmap = new Bitmap((int)SystemParameters.PrimaryScreenWidth, (int)SystemParameters.PrimaryScreenHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                 using (Graphics g = Graphics.FromImage(bitmap))
                 {
@@ -134,10 +254,8 @@ namespace WindowsClient
                 
                 this.Opacity = 1;
 
-                // Compress and Upload to API
                 using (MemoryStream ms = new MemoryStream())
                 {
-                    // Save as jpeg to reduce size
                     bitmap.Save(ms, ImageFormat.Jpeg);
                     byte[] imageBytes = ms.ToArray();
                     
@@ -155,21 +273,19 @@ namespace WindowsClient
                             
                             if (!string.IsNullOrEmpty(url))
                             {
-                                // Send socket message
                                 await client.EmitAsync("send_message", new { content = url, type = "IMAGE" });
                             }
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                MessageBox.Show("Lỗi chụp ảnh: " + ex.Message);
                 this.Opacity = 1;
             }
             finally
             {
-                BtnCapture.IsEnabled = true;
+                if (BtnCapture != null) BtnCapture.IsEnabled = true;
             }
         }
     }
