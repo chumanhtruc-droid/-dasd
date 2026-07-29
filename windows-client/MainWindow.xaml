@@ -31,6 +31,12 @@
                             Background="Transparent" Foreground="White" BorderThickness="0"
                             Click="Disconnect_Click" ToolTip="Ngắt kết nối" Cursor="Hand" />
                 </StackPanel>
+
+                <!-- Nút Tắt hẳn ứng dụng -->
+                <Button Content="X" Width="15" Height="15" FontSize="8" 
+                        Background="Transparent" Foreground="White" BorderThickness="0"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,3,0"
+                        Click="Exit_Click" ToolTip="Tắt hoàn toàn phần mềm" Cursor="Hand" />
             </Grid>
 
             <!-- Chat Panel (Tự động mở rộng) -->

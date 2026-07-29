@@ -245,6 +245,11 @@ namespace WindowsClient
             ActionPanel.Visibility = Visibility.Collapsed;
         }
 
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
         private async void Capture_Click(object sender, RoutedEventArgs e)
         {
             if (client == null || !client.Connected) return;
