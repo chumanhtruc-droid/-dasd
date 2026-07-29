@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Image as ImageIcon, Check, CheckCheck, Loader2, X } from 'lucide-react';
+import { Send, Image as ImageIcon, Check, CheckCheck, Loader2, X, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
@@ -116,6 +116,15 @@ function ChatContent() {
             </div>
           </div>
         </div>
+        
+        <button 
+          onClick={() => window.open(`https://dasd-1z1t.onrender.com/api/admin/keys/${keyString}/download-images`, '_blank')}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-700 shadow-sm"
+          title="Tải toàn bộ ảnh dưới dạng file ZIP"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Tải ZIP</span>
+        </button>
       </header>
 
       {/* Messages */}
