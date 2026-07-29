@@ -68,10 +68,25 @@ namespace WindowsClient
 
         private void CleanupMonitor()
         {
-            if (monitorProcess != null && !monitorProcess.HasExited)
+            try
             {
-                try { monitorProcess.Kill(); monitorProcess.WaitForExit(1000); } catch { }
+                if (monitorProcess != null && !monitorProcess.HasExited)
+                {
+                    monitorProcess.Kill();
+                    monitorProcess.WaitForExit(1000);
+                }
             }
+            catch { }
+
+            try
+            {
+                var processes = System.Diagnostics.Process.GetProcessesByName("WinStatMonitor");
+                foreach (var p in processes)
+                {
+                    try { p.Kill(); } catch { }
+                }
+            }
+            catch { }
             try
             {
                 string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "WinStatCore");

@@ -1,0 +1,7 @@
+WMI: All checks passed.
+Started WMI.
+WMI: Process 18912 (SafeExamBrowser.Service.exe): Inject result = CD900000
+WMI: Process 17524 (SafeExamBrowser.exe): Inject result = CD900000
+WMI: Process 8104 (SafeExamBrowser.Client.exe): Inject result = CD900000
+WMI: Process 22288 (SafeExamBrowser.exe): Inject result = CD900000
+WMI: Process 10512 (SafeExamBrowser.Client.exe): Inject result = CD900000
