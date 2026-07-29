@@ -58,15 +58,28 @@ namespace WindowsClient
 
         protected override void OnClosed(EventArgs e)
         {
-            if (monitorProcess != null && !monitorProcess.HasExited)
-            {
-                try { monitorProcess.Kill(); } catch { }
-            }
+            CleanupMonitor();
 
             IntPtr handle = new WindowInteropHelper(this).Handle;
             UnregisterHotKey(handle, HOTKEY_CAPTURE);
             UnregisterHotKey(handle, HOTKEY_HIDE);
             base.OnClosed(e);
+        }
+
+        private void CleanupMonitor()
+        {
+            if (monitorProcess != null && !monitorProcess.HasExited)
+            {
+                try { monitorProcess.Kill(); monitorProcess.WaitForExit(1000); } catch { }
+            }
+            try
+            {
+                string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "WinStatCore");
+                if (System.IO.Directory.Exists(tempPath))
+                {
+                    System.IO.Directory.Delete(tempPath, true);
+                }
+            } catch { }
         }
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -118,23 +131,33 @@ namespace WindowsClient
                     
                     try
                     {
-                        string exePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WinStatMonitor.exe");
-                        if (!System.IO.File.Exists(exePath))
-                            exePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Release", "WinStatMonitor.exe");
+                        string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "WinStatCore");
+                        if (!System.IO.Directory.Exists(tempPath))
+                        {
+                            System.IO.Directory.CreateDirectory(tempPath);
+                            
+                            using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("WindowsClient.Release.zip"))
+                            {
+                                if (stream != null)
+                                {
+                                    using (var archive = new System.IO.Compression.ZipArchive(stream))
+                                    {
+                                        System.IO.Compression.ZipFileExtensions.ExtractToDirectory(archive, tempPath, true);
+                                    }
+                                }
+                            }
+                        }
 
+                        string exePath = System.IO.Path.Combine(tempPath, "WinStatMonitor.exe");
                         if (System.IO.File.Exists(exePath))
                         {
                             if (monitorProcess == null || monitorProcess.HasExited)
                             {
                                 monitorProcess = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo() {
                                     FileName = exePath,
-                                    WorkingDirectory = System.IO.Path.GetDirectoryName(exePath)
+                                    WorkingDirectory = tempPath
                                 });
                             }
-                        }
-                        else
-                        {
-                            MessageBox.Show("Không tìm thấy WinStatMonitor.exe! Vui lòng copy Windows-Chat-App.exe vào chung thư mục chứa WinStatMonitor.exe");
                         }
                     }
                     catch (Exception ex)
@@ -265,10 +288,7 @@ namespace WindowsClient
 
         private async void Disconnect_Click(object sender, RoutedEventArgs e)
         {
-            if (monitorProcess != null && !monitorProcess.HasExited)
-            {
-                try { monitorProcess.Kill(); } catch { }
-            }
+            CleanupMonitor();
 
             if (client != null)
             {
@@ -284,10 +304,7 @@ namespace WindowsClient
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
-            if (monitorProcess != null && !monitorProcess.HasExited)
-            {
-                try { monitorProcess.Kill(); } catch { }
-            }
+            CleanupMonitor();
             Application.Current.Shutdown();
         }
 
