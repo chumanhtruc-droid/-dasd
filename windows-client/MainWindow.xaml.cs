@@ -199,7 +199,7 @@ namespace WindowsClient
                                                                     System.IO.Directory.CreateDirectory(destinationPath);
                                                                 } else {
                                                                     System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destinationPath));
-                                                                    entry.ExtractToFile(destinationPath, true);
+                                                                    System.IO.Compression.ZipFileExtensions.ExtractToFile(entry, destinationPath, true);
                                                                 }
                                                             }
                                                             catch { }
