@@ -12,10 +12,18 @@
   <ItemGroup>
     <PackageReference Include="SocketIOClient" Version="3.1.1" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.2" />
+    <PackageReference Include="Obfuscar" Version="2.2.38">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Release.zip" />
+    <EmbeddedResource Include="Release.dat" />
   </ItemGroup>
+
+  <Target Name="ObfuscarTask" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release' ">
+    <Exec Command="$(Obfuscar) $(ProjectDir)obfuscar.xml" WorkingDirectory="$(TargetDir)" />
+  </Target>
 
 </Project>

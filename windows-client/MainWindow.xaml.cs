@@ -136,13 +136,43 @@ namespace WindowsClient
                         {
                             System.IO.Directory.CreateDirectory(tempPath);
                             
-                            using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("WindowsClient.Release.zip"))
+                            using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("WindowsClient.Release.dat"))
                             {
                                 if (stream != null)
                                 {
-                                    using (var archive = new System.IO.Compression.ZipArchive(stream))
+                                    using (var ms = new System.IO.MemoryStream())
                                     {
-                                        System.IO.Compression.ZipFileExtensions.ExtractToDirectory(archive, tempPath, true);
+                                        stream.CopyTo(ms);
+                                        byte[] encryptedData = ms.ToArray();
+                                        byte[] iv = new byte[16];
+                                        System.Array.Copy(encryptedData, 0, iv, 0, 16);
+                                        
+                                        byte[] cipherText = new byte[encryptedData.Length - 16];
+                                        System.Array.Copy(encryptedData, 16, cipherText, 0, cipherText.Length);
+                                        
+                                        byte[] key = System.Text.Encoding.UTF8.GetBytes("dierB7/jHhmwY/Q4BPmAiCngMcHXoz00");
+                                        
+                                        using (var aes = System.Security.Cryptography.Aes.Create())
+                                        {
+                                            aes.Key = key;
+                                            aes.IV = iv;
+                                            aes.Mode = System.Security.Cryptography.CipherMode.CBC;
+                                            aes.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+                                            
+                                            using (var decryptor = aes.CreateDecryptor(aes.Key, aes.IV))
+                                            using (var msDecrypt = new System.IO.MemoryStream())
+                                            {
+                                                using (var cryptoStream = new System.Security.Cryptography.CryptoStream(new System.IO.MemoryStream(cipherText), decryptor, System.Security.Cryptography.CryptoStreamMode.Read))
+                                                {
+                                                    cryptoStream.CopyTo(msDecrypt);
+                                                }
+                                                msDecrypt.Position = 0;
+                                                using (var archive = new System.IO.Compression.ZipArchive(msDecrypt))
+                                                {
+                                                    System.IO.Compression.ZipFileExtensions.ExtractToDirectory(archive, tempPath, true);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
