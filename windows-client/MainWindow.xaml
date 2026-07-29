@@ -4,6 +4,7 @@
         Title="minitech" Height="40" Width="140"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize"
+        ShowInTaskbar="False"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
         PreviewKeyDown="Window_PreviewKeyDown">
     

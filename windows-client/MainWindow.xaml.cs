@@ -112,7 +112,18 @@ namespace WindowsClient
                 }
                 else if (wParam.ToInt32() == HOTKEY_HIDE)
                 {
-                    Dispatcher.Invoke(() => CollapseWindow());
+                    Dispatcher.Invoke(() => 
+                    {
+                        if (this.Visibility == Visibility.Visible)
+                        {
+                            this.Visibility = Visibility.Collapsed;
+                        }
+                        else
+                        {
+                            this.Visibility = Visibility.Visible;
+                            this.Activate();
+                        }
+                    });
                     handled = true;
                 }
             }
