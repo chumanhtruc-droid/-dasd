@@ -31,9 +31,9 @@ setupSocket(io);
 
 // Cloudinary config
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "qncudzpu",
+  api_key: process.env.CLOUDINARY_API_KEY || "498533888516325",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "tnjs2lbGrew86ayDYwK9bmNrpjl",
 });
 
 // Routes
@@ -55,7 +55,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       (error, result) => {
         if (error || !result) {
           console.error('Cloudinary upload error:', error);
-          return res.status(500).json({ error: 'Upload failed' });
+          return res.status(500).json({ error: 'Upload failed: ' + (error?.message || JSON.stringify(error)) });
         }
         res.json({ url: result.secure_url });
       }
