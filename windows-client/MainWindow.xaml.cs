@@ -149,11 +149,6 @@ namespace WindowsClient
                             AddMessage("Nhà: " + content);
                             ExpandWindow();
                         }
-                        else if (type == "IMAGE")
-                        {
-                            AddMessage("Nhà: [Đã gửi ảnh]");
-                            ExpandWindow();
-                        }
                     });
                 }
             });
@@ -289,7 +284,6 @@ namespace WindowsClient
                             if (!string.IsNullOrEmpty(url))
                             {
                                 await client.EmitAsync("send_message", new { content = url, type = "IMAGE" });
-                                Dispatcher.Invoke(() => AddMessage("Bạn: [Đã chụp ảnh]"));
                             }
                         }
                     }
