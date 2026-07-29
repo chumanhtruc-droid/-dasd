@@ -124,7 +124,12 @@ function ChatContent() {
         
         <div className="flex gap-2">
           <button 
-            onClick={() => window.location.href = '/admin'}
+            onClick={() => {
+              const newKey = window.prompt("Nhập Key mới để kết nối:");
+              if (newKey && newKey.trim() !== '') {
+                window.location.href = `/chat?key=${newKey.trim()}`;
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
             title="Đổi Key kết nối khác"
           >
