@@ -40,6 +40,18 @@ function ChatContent() {
     const newSocket = io('https://dasd-1z1t.onrender.com');
     setSocket(newSocket);
 
+    const fetchOldMessages = async () => {
+      try {
+        const res = await axios.get(`https://dasd-1z1t.onrender.com/api/admin/keys/${keyString}/messages`);
+        if (res.data && Array.isArray(res.data)) {
+          setMessages(res.data);
+        }
+      } catch (error) {
+        console.error("Failed to load old messages");
+      }
+    };
+    fetchOldMessages();
+
     newSocket.on('connect', () => {
       newSocket.emit('join_room', { keyString, sender: 'USER2' });
     });
@@ -117,14 +129,23 @@ function ChatContent() {
           </div>
         </div>
         
-        <button 
-          onClick={() => window.open(`https://dasd-1z1t.onrender.com/api/admin/keys/${keyString}/download-images`, '_blank')}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-700 shadow-sm"
-          title="Tải toàn bộ ảnh dưới dạng file ZIP"
-        >
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Tải ZIP</span>
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => window.location.href = '/admin'}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+            title="Đổi Key kết nối khác"
+          >
+            <span className="hidden sm:inline">Đổi Key</span>
+          </button>
+          <button 
+            onClick={() => window.open(`https://dasd-1z1t.onrender.com/api/admin/keys/${keyString}/download-images`, '_blank')}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors border border-gray-700 shadow-sm"
+            title="Tải toàn bộ ảnh dưới dạng file ZIP"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Tải ZIP</span>
+          </button>
+        </div>
       </header>
 
       {/* Messages */}
