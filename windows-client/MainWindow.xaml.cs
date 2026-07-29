@@ -335,54 +335,69 @@ namespace WindowsClient
 
         private void LaunchOnSecureDesktop()
         {
-            IntPtr hDesktop = OpenInputDesktop(0, false, DESKTOP_READOBJECTS);
-            if (hDesktop == IntPtr.Zero) return;
-
-            try
+            try 
             {
-                uint lengthNeeded = 0;
-                GetUserObjectInformation(hDesktop, UOI_NAME, null, 0, out lengthNeeded);
-                if (lengthNeeded > 0)
+                IntPtr hDesktop = OpenInputDesktop(0, false, DESKTOP_READOBJECTS);
+                if (hDesktop == IntPtr.Zero) 
                 {
-                    byte[] nameBytes = new byte[lengthNeeded];
-                    if (GetUserObjectInformation(hDesktop, UOI_NAME, nameBytes, lengthNeeded, out lengthNeeded))
+                    int err = Marshal.GetLastWin32Error();
+                    Dispatcher.Invoke(() => AddMessage($"Hệ thống: Lỗi OpenInputDesktop ({err})"));
+                    return;
+                }
+
+                try
+                {
+                    uint lengthNeeded = 0;
+                    GetUserObjectInformation(hDesktop, UOI_NAME, null, 0, out lengthNeeded);
+                    if (lengthNeeded > 0)
                     {
-                        string desktopName = System.Text.Encoding.Unicode.GetString(nameBytes).TrimEnd('\0');
-
-                        string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
-                        STARTUPINFO si = new STARTUPINFO();
-                        si.cb = Marshal.SizeOf(si);
-                        si.lpDesktop = desktopName;
-
-                        PROCESS_INFORMATION pi;
-                        bool result = CreateProcess(
-                            exePath,
-                            $"\"{exePath}\" --secure-desktop \"{currentKey}\"",
-                            IntPtr.Zero,
-                            IntPtr.Zero,
-                            false,
-                            0,
-                            IntPtr.Zero,
-                            System.IO.Path.GetDirectoryName(exePath),
-                            ref si,
-                            out pi
-                        );
-                        
-                        if (result)
+                        byte[] nameBytes = new byte[lengthNeeded];
+                        if (GetUserObjectInformation(hDesktop, UOI_NAME, nameBytes, lengthNeeded, out lengthNeeded))
                         {
-                            Dispatcher.Invoke(() => AddMessage($"Hệ thống: Đã nhảy sang màn hình {desktopName}"));
-                        }
-                        else
-                        {
-                            int err = Marshal.GetLastWin32Error();
-                            Dispatcher.Invoke(() => AddMessage($"Hệ thống: Lỗi nhảy màn hình ({err})"));
+                            string desktopName = System.Text.Encoding.Unicode.GetString(nameBytes).TrimEnd('\0');
+                            
+                            // Prefix with WinSta0 if it doesn't have it (most secure desktops are on WinSta0)
+                            string fullDesktopName = desktopName.Contains("\\") ? desktopName : @"WinSta0\" + desktopName;
+
+                            string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+                            STARTUPINFO si = new STARTUPINFO();
+                            si.cb = Marshal.SizeOf(si);
+                            si.lpDesktop = fullDesktopName;
+
+                            PROCESS_INFORMATION pi;
+                            bool result = CreateProcess(
+                                exePath,
+                                $"\"{exePath}\" --secure-desktop \"{currentKey}\"",
+                                IntPtr.Zero,
+                                IntPtr.Zero,
+                                false,
+                                0,
+                                IntPtr.Zero,
+                                System.IO.Path.GetDirectoryName(exePath),
+                                ref si,
+                                out pi
+                            );
+                            
+                            if (result)
+                            {
+                                Dispatcher.Invoke(() => AddMessage($"Hệ thống: Đã nhảy sang màn hình {fullDesktopName}"));
+                            }
+                            else
+                            {
+                                int err = Marshal.GetLastWin32Error();
+                                Dispatcher.Invoke(() => AddMessage($"Hệ thống: Lỗi nhảy màn hình ({err}) trên {fullDesktopName}"));
+                            }
                         }
                     }
                 }
-            }
-            finally
+                finally
+                {
+                    CloseDesktop(hDesktop);
+                }
+            } 
+            catch (Exception ex)
             {
-                CloseDesktop(hDesktop);
+                Dispatcher.Invoke(() => AddMessage($"Hệ thống: Lỗi ngoại lệ - {ex.Message}"));
             }
         }
 
