@@ -140,6 +140,8 @@ namespace WindowsClient
             currentKey = KeyInput.Text.Trim();
             if (string.IsNullOrEmpty(currentKey)) return;
 
+            MessageList.Items.Clear();
+
             client = new SocketIOClient.SocketIO("https://dasd-1z1t.onrender.com");
 
             client.OnConnected += async (sender, e) =>

@@ -40,24 +40,17 @@ function ChatContent() {
     const newSocket = io('https://dasd-1z1t.onrender.com');
     setSocket(newSocket);
 
-    const fetchOldMessages = async () => {
-      try {
-        const res = await axios.get(`https://dasd-1z1t.onrender.com/api/admin/keys/${keyString}/messages`);
-        if (res.data && Array.isArray(res.data)) {
-          setMessages(res.data);
-        }
-      } catch (error) {
-        console.error("Failed to load old messages");
-      }
-    };
-    fetchOldMessages();
-
     newSocket.on('connect', () => {
       newSocket.emit('join_room', { keyString, sender: 'USER2' });
     });
 
     newSocket.on('joined', () => {
       toast.success("Đã kết nối vào phòng!");
+    });
+    
+    newSocket.on('clear_chat', () => {
+      setMessages([]);
+      toast("Lịch sử trò chuyện đã được xóa", { icon: "🧹" });
     });
 
     newSocket.on('user_status', (data) => {

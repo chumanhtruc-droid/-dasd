@@ -40,6 +40,13 @@ export const setupSocket = (io: Server) => {
 
         socket.emit('joined', { message: 'Đã tham gia phòng', keyId: key.id });
         
+        if (data.sender === 'USER1') {
+          await prisma.message.deleteMany({
+            where: { keyId: key.id }
+          });
+          io.to(key.id).emit('clear_chat');
+        }
+
         // Notify others
         socket.to(key.id).emit('user_status', { sender: data.sender, status: 'ONLINE' });
 
