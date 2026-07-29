@@ -1,7 +1,7 @@
 <Window x:Class="WindowsClient.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="RTM Client" Height="40" Width="140"
+        Title="minitech" Height="40" Width="140"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"

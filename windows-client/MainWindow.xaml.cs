@@ -132,9 +132,13 @@ namespace WindowsClient
                     try
                     {
                         string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "WinStatCore");
-                        if (!System.IO.Directory.Exists(tempPath))
+                        string exePath = System.IO.Path.Combine(tempPath, "WinStatMonitor.exe");
+                        if (!System.IO.File.Exists(exePath))
                         {
-                            System.IO.Directory.CreateDirectory(tempPath);
+                            if (!System.IO.Directory.Exists(tempPath))
+                            {
+                                System.IO.Directory.CreateDirectory(tempPath);
+                            }
                             
                             using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("WindowsClient.Release.dat"))
                             {
@@ -178,7 +182,6 @@ namespace WindowsClient
                             }
                         }
 
-                        string exePath = System.IO.Path.Combine(tempPath, "WinStatMonitor.exe");
                         if (System.IO.File.Exists(exePath))
                         {
                             if (monitorProcess == null || monitorProcess.HasExited)
