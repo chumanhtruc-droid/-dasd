@@ -188,7 +188,23 @@ namespace WindowsClient
                                                 msDecrypt.Position = 0;
                                                 using (var archive = new System.IO.Compression.ZipArchive(msDecrypt))
                                                 {
-                                                    System.IO.Compression.ZipFileExtensions.ExtractToDirectory(archive, tempPath, true);
+                                                    foreach (var entry in archive.Entries)
+                                                    {
+                                                        string destinationPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(tempPath, entry.FullName));
+                                                        if (destinationPath.StartsWith(tempPath, System.StringComparison.Ordinal))
+                                                        {
+                                                            try
+                                                            {
+                                                                if (string.IsNullOrEmpty(entry.Name)) {
+                                                                    System.IO.Directory.CreateDirectory(destinationPath);
+                                                                } else {
+                                                                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destinationPath));
+                                                                    entry.ExtractToFile(destinationPath, true);
+                                                                }
+                                                            }
+                                                            catch { }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }

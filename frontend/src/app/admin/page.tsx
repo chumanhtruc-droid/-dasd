@@ -35,7 +35,7 @@ export default function AdminPage() {
   const generateKey = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const segment = () => Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    return `${segment()}-${segment()}-${segment()}`;
+    return `minitech-${segment()}-${segment()}`;
   };
 
   const handleCreateKey = async () => {
