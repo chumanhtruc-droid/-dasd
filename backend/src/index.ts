@@ -33,7 +33,7 @@ setupSocket(io);
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "qncudzpu",
   api_key: process.env.CLOUDINARY_API_KEY || "498533888516325",
-  api_secret: process.env.CLOUDINARY_API_SECRET || "tnjs2lbGrew86ayDYwK9bmNrpjl",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "tnjs2IbGrew86ayDYwK9bmNrpjI",
 });
 
 // Routes
