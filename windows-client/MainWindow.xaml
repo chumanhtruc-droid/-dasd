@@ -34,7 +34,7 @@
             </Grid>
 
             <!-- Chat Panel (Tự động mở rộng) -->
-            <Grid x:Name="ChatPanel" Visibility="Collapsed" Height="260">
+            <Grid x:Name="ChatPanel" Visibility="Collapsed" Height="45">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />

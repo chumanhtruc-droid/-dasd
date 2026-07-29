@@ -28,9 +28,11 @@ namespace WindowsClient
         [DllImport("user32.dll")]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         
-        private const int HOTKEY_ID = 9000;
+        private const int HOTKEY_CAPTURE = 9000;
+        private const int HOTKEY_HIDE = 9001;
         private const uint MOD_CONTROL = 0x0002;
         private const uint VK_X = 0x58;
+        private const uint VK_Z = 0x5A;
 
         private bool isExpanded = false;
 
@@ -49,28 +51,36 @@ namespace WindowsClient
             HwndSource source = HwndSource.FromHwnd(handle);
             source.AddHook(HwndHook);
             
-            // Register Ctrl + X as global hotkey
-            RegisterHotKey(handle, HOTKEY_ID, MOD_CONTROL, VK_X);
+            RegisterHotKey(handle, HOTKEY_CAPTURE, MOD_CONTROL, VK_X);
+            RegisterHotKey(handle, HOTKEY_HIDE, MOD_CONTROL, VK_Z);
         }
 
         protected override void OnClosed(EventArgs e)
         {
             IntPtr handle = new WindowInteropHelper(this).Handle;
-            UnregisterHotKey(handle, HOTKEY_ID);
+            UnregisterHotKey(handle, HOTKEY_CAPTURE);
+            UnregisterHotKey(handle, HOTKEY_HIDE);
             base.OnClosed(e);
         }
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_HOTKEY = 0x0312;
-            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            if (msg == WM_HOTKEY)
             {
-                // Ctrl + X pressed anywhere
-                if (client != null && client.Connected)
+                if (wParam.ToInt32() == HOTKEY_CAPTURE)
                 {
-                    Dispatcher.Invoke(() => Capture_Click(null, null));
+                    if (client != null && client.Connected)
+                    {
+                        Dispatcher.Invoke(() => Capture_Click(null, null));
+                    }
+                    handled = true;
                 }
-                handled = true;
+                else if (wParam.ToInt32() == HOTKEY_HIDE)
+                {
+                    Dispatcher.Invoke(() => CollapseWindow());
+                    handled = true;
+                }
             }
             return IntPtr.Zero;
         }
@@ -139,6 +149,11 @@ namespace WindowsClient
                             AddMessage("Nhà: " + content);
                             ExpandWindow();
                         }
+                        else if (type == "IMAGE")
+                        {
+                            AddMessage("Nhà: [Đã gửi ảnh]");
+                            ExpandWindow();
+                        }
                     });
                 }
             });
@@ -157,8 +172,8 @@ namespace WindowsClient
         {
             if (isExpanded) return;
             isExpanded = true;
-            this.Width = 250;
-            this.Height = 300;
+            this.Width = 200;
+            this.Height = 85;
             this.Left = SystemParameters.WorkArea.Width - this.Width - 20;
             this.Top = SystemParameters.WorkArea.Height - this.Height - 20;
             ChatPanel.Visibility = Visibility.Visible;
@@ -274,6 +289,7 @@ namespace WindowsClient
                             if (!string.IsNullOrEmpty(url))
                             {
                                 await client.EmitAsync("send_message", new { content = url, type = "IMAGE" });
+                                Dispatcher.Invoke(() => AddMessage("Bạn: [Đã chụp ảnh]"));
                             }
                         }
                     }
