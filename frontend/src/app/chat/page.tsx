@@ -23,6 +23,7 @@ function ChatContent() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [pastInput, setPastInput] = useState('');
   const [partnerStatus, setPartnerStatus] = useState('OFFLINE');
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -81,6 +82,13 @@ function ChatContent() {
     if (!socket || !content.trim()) return;
     socket.emit('send_message', { content, type });
     if (type === 'TEXT') setInput('');
+  };
+
+  const sendPastMessage = () => {
+    if (!socket || !pastInput.trim()) return;
+    socket.emit('send_message', { content: pastInput, type: 'PASTE_TEXT' });
+    setPastInput('');
+    toast.success("Đã gửi nội dung Past!");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +153,25 @@ function ChatContent() {
           </button>
         </div>
       </header>
+
+      {/* Past Input Bar */}
+      <div className="px-6 py-3 bg-[#161616] border-b border-gray-800 flex gap-3">
+        <input
+          type="text"
+          value={pastInput}
+          onChange={(e) => setPastInput(e.target.value)}
+          placeholder="Nhập nội dung Past để gõ ẩn (bấm phím ] trên máy kia)..."
+          className="flex-1 px-4 py-2 bg-[#222222] border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+          onKeyDown={(e) => e.key === 'Enter' && sendPastMessage()}
+        />
+        <button
+          onClick={sendPastMessage}
+          disabled={!pastInput.trim()}
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          Gửi vào Past
+        </button>
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">

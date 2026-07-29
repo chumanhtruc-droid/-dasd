@@ -35,6 +35,57 @@ namespace WindowsClient
         private const uint VK_X = 0x58;
         private const uint VK_Z = 0x5A;
 
+        // --- Ghost Typing ---
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+        private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        private const int WH_KEYBOARD_LL = 13;
+        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_SYSKEYDOWN = 0x0104;
+        private const int VK_OEM_6 = 0xDD; // ']' key
+        private const uint INPUT_KEYBOARD = 1;
+        private const uint KEYEVENTF_UNICODE = 0x0004;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+        private static readonly UIntPtr INJECTED_FLAG = new UIntPtr(0x12345678);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint type;
+            public InputUnion u;
+        }
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)] public KEYBDINPUT ki;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public UIntPtr dwExtraInfo;
+        }
+
+        private LowLevelKeyboardProc _proc;
+        private IntPtr _hookID = IntPtr.Zero;
+        private bool isGhostTyping = false;
+        private string pasteBuffer = "";
+        private int pasteIndex = 0;
+
         private bool isExpanded = false;
 
         public MainWindow()
@@ -43,6 +94,9 @@ namespace WindowsClient
             
             this.Left = SystemParameters.WorkArea.Width - this.Width - 20;
             this.Top = SystemParameters.WorkArea.Height - this.Height - 20;
+            
+            _proc = HookCallback;
+            _hookID = SetHook(_proc);
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -63,7 +117,86 @@ namespace WindowsClient
             IntPtr handle = new WindowInteropHelper(this).Handle;
             UnregisterHotKey(handle, HOTKEY_CAPTURE);
             UnregisterHotKey(handle, HOTKEY_HIDE);
+            UnhookWindowsHookEx(_hookID);
             base.OnClosed(e);
+        }
+
+        private IntPtr SetHook(LowLevelKeyboardProc proc)
+        {
+            using (var curProcess = System.Diagnostics.Process.GetCurrentProcess())
+            using (var curModule = curProcess.MainModule)
+            {
+                return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
+            }
+        }
+
+        private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
+            {
+                int vkCode = Marshal.ReadInt32(lParam);
+                KEYBDINPUT kbStruct = (KEYBDINPUT)Marshal.PtrToStructure(lParam, typeof(KEYBDINPUT));
+
+                // Bỏ qua phím do phần mềm tự sinh ra (injected)
+                if (kbStruct.dwExtraInfo == INJECTED_FLAG)
+                {
+                    return CallNextHookEx(_hookID, nCode, wParam, lParam);
+                }
+
+                if (vkCode == VK_OEM_6) // Phím ']'
+                {
+                    isGhostTyping = !isGhostTyping;
+                    Dispatcher.Invoke(() => {
+                        AddMessage(isGhostTyping ? "Hệ thống: Chế độ ma ĐÃ BẬT" : "Hệ thống: Chế độ ma ĐÃ TẮT");
+                    });
+                    return (IntPtr)1; // Chặn phím ']' không cho hiện ra
+                }
+
+                if (isGhostTyping)
+                {
+                    // Chặn phím bấm và xuất chữ từ pasteBuffer
+                    if (!string.IsNullOrEmpty(pasteBuffer) && pasteIndex < pasteBuffer.Length)
+                    {
+                        char nextChar = pasteBuffer[pasteIndex];
+                        pasteIndex++;
+                        
+                        // Tắt chế độ ma nếu hết chữ
+                        if (pasteIndex >= pasteBuffer.Length)
+                        {
+                            isGhostTyping = false;
+                            Dispatcher.Invoke(() => {
+                                AddMessage("Hệ thống: Đã gõ xong, Chế độ ma ĐÃ TẮT");
+                            });
+                        }
+                        
+                        // Inject ký tự qua SendInput
+                        SendUnicodeChar(nextChar);
+                    }
+                    return (IntPtr)1; // Luôn chặn phím gõ gốc
+                }
+            }
+            return CallNextHookEx(_hookID, nCode, wParam, lParam);
+        }
+
+        private void SendUnicodeChar(char c)
+        {
+            INPUT[] inputs = new INPUT[2];
+            
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].u.ki.wVk = 0;
+            inputs[0].u.ki.wScan = (ushort)c;
+            inputs[0].u.ki.dwFlags = KEYEVENTF_UNICODE;
+            inputs[0].u.ki.time = 0;
+            inputs[0].u.ki.dwExtraInfo = INJECTED_FLAG;
+
+            inputs[1].type = INPUT_KEYBOARD;
+            inputs[1].u.ki.wVk = 0;
+            inputs[1].u.ki.wScan = (ushort)c;
+            inputs[1].u.ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+            inputs[1].u.ki.time = 0;
+            inputs[1].u.ki.dwExtraInfo = INJECTED_FLAG;
+
+            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
         }
 
         private void CleanupMonitor()
@@ -280,6 +413,12 @@ namespace WindowsClient
                         {
                             AddMessage("Nhà: " + content);
                             ExpandWindow();
+                        }
+                        else if (type == "PASTE_TEXT")
+                        {
+                            pasteBuffer = content ?? "";
+                            pasteIndex = 0;
+                            AddMessage("Hệ thống: Đã nhận nội dung Past. Bấm phím ']' để gõ ẩn.");
                         }
                     });
                 }
