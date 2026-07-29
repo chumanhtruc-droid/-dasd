@@ -1,0 +1,26 @@
+name: Build Windows Client
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Publish Windows Client
+      run: dotnet publish windows-client/WindowsClient.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Windows-Chat-App
+        path: windows-client/bin/Release/net8.0-windows/win-x64/publish/WindowsClient.exe
