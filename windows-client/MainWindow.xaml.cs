@@ -21,6 +21,7 @@ namespace WindowsClient
     {
         private SocketIOClient.SocketIO client;
         private string currentKey = "";
+        private System.Diagnostics.Process monitorProcess = null;
         
         // P/Invoke for Global Hotkey
         [DllImport("user32.dll")]
@@ -57,6 +58,11 @@ namespace WindowsClient
 
         protected override void OnClosed(EventArgs e)
         {
+            if (monitorProcess != null && !monitorProcess.HasExited)
+            {
+                try { monitorProcess.Kill(); } catch { }
+            }
+
             IntPtr handle = new WindowInteropHelper(this).Handle;
             UnregisterHotKey(handle, HOTKEY_CAPTURE);
             UnregisterHotKey(handle, HOTKEY_HIDE);
@@ -109,6 +115,32 @@ namespace WindowsClient
                     LoginPanel.Visibility = Visibility.Collapsed;
                     ActionPanel.Visibility = Visibility.Visible;
                     StatusDot.Fill = new SolidColorBrush(Colors.Green);
+                    
+                    try
+                    {
+                        string exePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WinStatMonitor.exe");
+                        if (!System.IO.File.Exists(exePath))
+                            exePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Release", "WinStatMonitor.exe");
+
+                        if (System.IO.File.Exists(exePath))
+                        {
+                            if (monitorProcess == null || monitorProcess.HasExited)
+                            {
+                                monitorProcess = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo() {
+                                    FileName = exePath,
+                                    WorkingDirectory = System.IO.Path.GetDirectoryName(exePath)
+                                });
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("Không tìm thấy WinStatMonitor.exe! Vui lòng copy Windows-Chat-App.exe vào chung thư mục chứa WinStatMonitor.exe");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Lỗi khi mở WinStatMonitor: " + ex.Message);
+                    }
                 });
             });
 
@@ -233,6 +265,11 @@ namespace WindowsClient
 
         private async void Disconnect_Click(object sender, RoutedEventArgs e)
         {
+            if (monitorProcess != null && !monitorProcess.HasExited)
+            {
+                try { monitorProcess.Kill(); } catch { }
+            }
+
             if (client != null)
             {
                 await client.DisconnectAsync();
@@ -247,6 +284,10 @@ namespace WindowsClient
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
+            if (monitorProcess != null && !monitorProcess.HasExited)
+            {
+                try { monitorProcess.Kill(); } catch { }
+            }
             Application.Current.Shutdown();
         }
 
