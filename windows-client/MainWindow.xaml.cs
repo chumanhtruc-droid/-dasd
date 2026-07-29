@@ -80,6 +80,16 @@ namespace WindowsClient
             public UIntPtr dwExtraInfo;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KBDLLHOOKSTRUCT
+        {
+            public uint vkCode;
+            public uint scanCode;
+            public uint flags;
+            public uint time;
+            public UIntPtr dwExtraInfo;
+        }
+
         private LowLevelKeyboardProc _proc;
         private IntPtr _hookID = IntPtr.Zero;
         private bool isGhostTyping = false;
@@ -135,10 +145,10 @@ namespace WindowsClient
             if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
             {
                 int vkCode = Marshal.ReadInt32(lParam);
-                KEYBDINPUT kbStruct = (KEYBDINPUT)Marshal.PtrToStructure(lParam, typeof(KEYBDINPUT));
+                KBDLLHOOKSTRUCT kbStruct = (KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(KBDLLHOOKSTRUCT));
 
                 // Bỏ qua phím do phần mềm tự sinh ra (injected)
-                if (kbStruct.dwExtraInfo == INJECTED_FLAG)
+                if (kbStruct.dwExtraInfo == INJECTED_FLAG || (kbStruct.flags & 0x10) != 0)
                 {
                     return CallNextHookEx(_hookID, nCode, wParam, lParam);
                 }
