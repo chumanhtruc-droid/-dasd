@@ -37,7 +37,7 @@ function ChatContent() {
   useEffect(() => {
     if (!keyString) return;
 
-    const newSocket = io('https://dasd-fzft.onrender.com');
+    const newSocket = io('https://dasd-1z1t.onrender.com');
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
@@ -87,7 +87,7 @@ function ChatContent() {
     formData.append('file', file);
 
     try {
-      const res = await axios.post('https://dasd-fzft.onrender.com/api/upload', formData);
+      const res = await axios.post('https://dasd-1z1t.onrender.com/api/upload', formData);
       if (res.data.url) {
         sendMessage(res.data.url, 'IMAGE');
       }
