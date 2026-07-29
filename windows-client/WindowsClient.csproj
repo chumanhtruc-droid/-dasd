@@ -24,6 +24,7 @@
 
   <Target Name="ObfuscarTask" AfterTargets="AfterBuild" Condition=" '$(Configuration)' == 'Release' ">
     <Exec Command="$(Obfuscar) $(ProjectDir)obfuscar.xml" WorkingDirectory="$(TargetDir)" />
+    <Copy SourceFiles="$(TargetDir)Obfuscated\WindowsClient.dll" DestinationFolder="$(TargetDir)" />
   </Target>
 
 </Project>

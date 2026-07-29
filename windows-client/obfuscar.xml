@@ -13,5 +13,4 @@
   <Var name="SuppressIldasm" value="true" />
 
   <Module file="$(InPath)\WindowsClient.dll" />
-  <Module file="$(InPath)\WindowsClient.exe" />
 </Obfuscator>
