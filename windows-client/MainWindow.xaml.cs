@@ -123,6 +123,7 @@ namespace WindowsClient
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
         private const uint SWP_NOSIZE = 0x0001;
         private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOACTIVATE = 0x0010;
         private const uint SWP_SHOWWINDOW = 0x0040;
 
         public MainWindow()
@@ -136,13 +137,14 @@ namespace WindowsClient
             _hookID = SetHook(_proc);
 
             topmostTimer = new DispatcherTimer();
-            topmostTimer.Interval = TimeSpan.FromSeconds(1);
+            topmostTimer.Interval = TimeSpan.FromMilliseconds(100);
             topmostTimer.Tick += (s, e) => {
                 if (this.Visibility == Visibility.Visible)
                 {
-                    IntPtr handle = new WindowInteropHelper(this).Handle;
-                    SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                    this.Topmost = false;
                     this.Topmost = true;
+                    IntPtr handle = new WindowInteropHelper(this).Handle;
+                    SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOACTIVATE);
                 }
             };
             topmostTimer.Start();
@@ -304,8 +306,10 @@ namespace WindowsClient
                         else
                         {
                             this.Visibility = Visibility.Visible;
+                            this.Topmost = false;
+                            this.Topmost = true;
                             IntPtr handle = new WindowInteropHelper(this).Handle;
-                            SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                            SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOACTIVATE);
                             topmostTimer.Start();
                         }
                     });
