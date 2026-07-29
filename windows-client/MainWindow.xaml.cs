@@ -16,7 +16,7 @@ namespace WindowsClient
 {
     public partial class MainWindow : Window
     {
-        private SocketIO client;
+        private SocketIOClient.SocketIO client;
         private string currentKey = "";
         
         public MainWindow()
@@ -38,7 +38,7 @@ namespace WindowsClient
             currentKey = KeyInput.Text.Trim();
             if (string.IsNullOrEmpty(currentKey)) return;
 
-            client = new SocketIO("https://dasd-1z1t.onrender.com");
+            client = new SocketIOClient.SocketIO("https://dasd-1z1t.onrender.com");
 
             client.OnConnected += async (sender, e) =>
             {
